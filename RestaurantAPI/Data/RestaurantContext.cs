@@ -9,17 +9,7 @@ namespace RestaurantAPI.Data
         {
         }
 
-        public DbSet<MenuItem> MenuItems { get; set; } = null!;
-        public DbSet<Customer> Customers { get; set; } = null!;
-        public DbSet<Order> Orders { get; set; } = null!;
-        public DbSet<OrderItem> OrderItems { get; set; } = null!;
-
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-{
-    modelBuilder.Entity<MenuItem>()
-        .Property(m => m.Price)
-        .HasColumnType("decimal(18, 2)"); 
-}
-
+        public DbSet<MenuItem> MenuItems { get; set; }
     }
 }
+

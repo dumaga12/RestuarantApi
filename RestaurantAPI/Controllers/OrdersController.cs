@@ -9,34 +9,100 @@ namespace RestaurantAPI.Controllers
     [ApiController]
     public class OrdersController : ControllerBase
     {
-        private readonly RestaurantContext _context;
+        private readonly ApplicationDbContext _context;
 
-        public OrdersController(RestaurantContext context)
+        public OrdersController(ApplicationDbContext context)
         {
             _context = context;
         }
 
+        // GET: api/Orders
         [HttpGet]
-        public async Task<IActionResult> GetAllOrders()
+        public async Task<ActionResult<IEnumerable<Order>>> GetOrders()
         {
-            return Ok(await _context.Orders.Include(o => o.OrderItems).ThenInclude(oi => oi.MenuItem).ToListAsync());
+            return await _context.Orders.Include(o => o.Customer).ToListAsync();
         }
 
-        [HttpPost]
-        public async Task<IActionResult> CreateOrder([FromBody] Order order)
+        // GET: api/Orders/{id}
+        [HttpGet("{id}")]
+        public async Task<ActionResult<Order>> GetOrder(int id)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            var order = await _context.Orders.Include(o => o.Customer).FirstOrDefaultAsync(o => o.Id == id);
 
-            foreach (var itemId in order.OrderItems.Select(oi => oi.MenuItemId))
+            if (order == null)
             {
-                if (!_context.MenuItems.Any(m => m.Id == itemId))
-                    return NotFound($"MenuItem with ID {itemId} not found.");
+                return NotFound();
+            }
+
+            return order;
+        }
+
+        // POST: api/Orders
+        [HttpPost]
+        public async Task<ActionResult<Order>> PostOrder(Order order)
+        {
+            // Do not set ID manually
+            var customer = await _context.Customers.FirstOrDefaultAsync(c => c.Id == order.CustomerId);
+            if (customer != null)
+            {
+                order.Customer = customer;
             }
 
             _context.Orders.Add(order);
             await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetAllOrders), new { id = order.Id }, order);
+
+            return CreatedAtAction(nameof(GetOrder), new { id = order.Id }, order);
+        }
+
+        // PUT: api/Orders/{id}
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutOrder(int id, Order order)
+        {
+            if (id != order.Id)
+            {
+                return BadRequest();
+            }
+
+            _context.Entry(order).State = EntityState.Modified;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!OrderExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return NoContent();
+        }
+
+        // DELETE: api/Orders/{id}
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteOrder(int id)
+        {
+            var order = await _context.Orders.FindAsync(id);
+            if (order == null)
+            {
+                return NotFound();
+            }
+
+            _context.Orders.Remove(order);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+        private bool OrderExists(int id)
+        {
+            return _context.Orders.Any(e => e.Id == id);
         }
     }
 }
